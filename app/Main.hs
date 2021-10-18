@@ -1,6 +1,6 @@
 module Main where
 
-import MyLib
+import Glenside
 
 main :: IO ()
 main = print "hello world"
