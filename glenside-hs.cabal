@@ -1,34 +1,64 @@
-cabal-version:      2.4
-name:               glenside-hs
-version:            0.1.0.0
+cabal-version: 1.12
 
--- A short (one-line) description of the package.
--- synopsis:
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
 
--- A longer description of the package.
--- description:
+name:           glenside-hs
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/glenside-hs#readme>
+homepage:       https://github.com/githubuser/glenside-hs#readme
+bug-reports:    https://github.com/githubuser/glenside-hs/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2021 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
 
--- A URL where users can report bugs.
--- bug-reports:
-
--- The license under which the package is released.
--- license:
-author:             Gus Smith
-maintainer:         guscomps@gmail.com
-
--- A copyright notice.
--- copyright:
--- category:
-extra-source-files: CHANGELOG.md
+source-repository head
+  type: git
+  location: https://github.com/githubuser/glenside-hs
 
 library
-    exposed-modules:  MyLib
+  exposed-modules:
+      MyLib
+  other-modules:
+      Paths_glenside_hs
+  hs-source-dirs:
+      src
+  build-depends:
+      Stack >=0.4.0
+    , base >=4.7 && <5
+    , containers >=0.6.5.1
+  default-language: Haskell2010
 
-    -- Modules included in this library but not exported.
-    -- other-modules:
+executable glenside-hs-exe
+  main-is: Main.hs
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      Stack >=0.4.0
+    , base >=4.7 && <5
+    , containers >=0.6.5.1
+    , glenside-hs
+  default-language: Haskell2010
 
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
-    build-depends:    base ^>=4.14.3.0
-    hs-source-dirs:   src
-    default-language: Haskell2010
+test-suite glenside-hs-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_glenside_hs
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      Stack >=0.4.0
+    , base >=4.7 && <5
+    , containers >=0.6.5.1
+    , glenside-hs
+  default-language: Haskell2010
