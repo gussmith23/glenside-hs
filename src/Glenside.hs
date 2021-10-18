@@ -11,6 +11,9 @@ type DimId = String
 -- |A set of dimension identifiers.
 type DimIdSet = Set DimId
 
+-- |Our core abstraction, the access pattern, will conceptually be a stack,
+-- whose stack frames are maps, mapping dimension identifiers to dimension
+-- sizes.
 type Frame = Map DimId Natural
 
 -- |A tensor is just an unordered set of dimensions. Layouts (i.e. a dimension
@@ -28,5 +31,7 @@ tensorToAccessPattern tensor = stackPush stackNew tensor
 -- |Access the access pattern at the given dimensions.
 access :: AccessPattern -> DimIdSet -> AccessPattern
 access a s = case stackPop a of 
-  Just (rest, top) -> (stackPush (stackPush rest (filterWithKey (\k _ -> Set.member k (Set.difference (keysSet top) s)) top)) (filterWithKey (\k _ -> Set.member k s) top))
-  _ -> error "hi"
+  Just (rest, top) -> 
+    let (l, r) = partitionWithKey (\k _ -> Set.member k s) top
+    in (stackPush (stackPush rest r) l)
+  _ -> error ""
