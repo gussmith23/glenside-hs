@@ -35,3 +35,9 @@ access a s = case stackPop a of
     let (l, r) = partitionWithKey (\k _ -> Set.member k s) top
     in (stackPush (stackPush rest r) l)
   _ -> error ""
+
+-- |
+cartProd :: AccessPattern -> AccessPattern -> AccessPattern
+cartProd a0 a1 = case (stackPop a0, stackPop a1 of
+  (Just (rest0, top0), Just (rest1, top1)) -> if top0 == top1 
+    then (stackPush (union rest0 rest1)
