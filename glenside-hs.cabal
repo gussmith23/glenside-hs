@@ -31,9 +31,10 @@ library
   hs-source-dirs:
       src
   build-depends:
-      Stack >=0.4.0
-    , base >=4.7 && <5
+      base >=4.7 && <5
     , containers >=0.6.5.1
+    , unordered-containers >=0.2
+    , vector >=0.12
   default-language: Haskell2010
 
 executable glenside-hs-exe
@@ -42,10 +43,11 @@ executable glenside-hs-exe
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      Stack >=0.4.0
-    , base >=4.7 && <5
+      base >=4.7 && <5
     , containers >=0.6.5.1
     , glenside-hs
+    , unordered-containers >=0.2
+    , vector >=0.12
   default-language: Haskell2010
 
 test-suite glenside-hs-test
@@ -57,8 +59,9 @@ test-suite glenside-hs-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      Stack >=0.4.0
-    , base >=4.7 && <5
+      base >=4.7 && <5
     , containers >=0.6.5.1
     , glenside-hs
+    , unordered-containers >=0.2
+    , vector >=0.12
   default-language: Haskell2010

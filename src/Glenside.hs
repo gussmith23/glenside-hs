@@ -1,9 +1,8 @@
-module Glenside (Frame, DimId, DimIdSet, Tensor, AccessPattern, tensorToAccessPattern, access, activations, weights, cartProd, a, b, dims) where
+module Glenside (Frame, DimId, DimIdSet, Tensor, AccessPattern, c, d, tensorToAccessPattern, access, activations, dim, weights, cartProd, a, b, dims, aTimesB, cTimesD) where
 
-import Data.Map.Strict (Map, fromList, partitionWithKey, singleton)
-import qualified Data.Map.Strict as Data.Set
-import Data.Set as Set (Set, fromList, member)
-import Data.Stack (Stack, stackNew, stackPop, stackPush)
+import Data.HashMap.Strict (difference, filterWithKey, fromList)
+import qualified Data.HashMap.Strict as HashMap (HashMap, empty, filterWithKey, fromList, union)
+import qualified Data.HashSet as HashSet (HashSet, fromList, member)
 import GHC.Base (assert)
 import GHC.IO.Exception (stackOverflow)
 import Numeric.Natural (Natural)
@@ -12,15 +11,18 @@ import Numeric.Natural (Natural)
 type DimId = String
 
 -- | A set of dimension identifiers.
-type DimIdSet = Set DimId
+type DimIdSet = HashSet.HashSet DimId
 
 dims :: [DimId] -> DimIdSet
-dims = Set.fromList
+dims = HashSet.fromList
+
+dim :: DimId -> DimIdSet
+dim d = HashSet.fromList [d]
 
 -- | Our core abstraction, the access pattern, will conceptually be a stack,
 --  whose stack frames are maps, mapping dimension identifiers to dimension
 --  sizes.
-type Frame = Map DimId Natural
+type Frame = HashMap.HashMap DimId Natural
 
 -- | A tensor is just an unordered set of dimensions. Layouts (i.e. a dimension
 --  orderings, for laying out data in memory) are imposed later.
@@ -28,48 +30,59 @@ type Tensor = Frame
 
 -- | An access pattern is a stack of dimension sets. The topmost dimension set
 --  represents the shape being processed.
-type AccessPattern = Stack Frame
+type AccessPattern = [Frame]
 
 -- | We can convert a tensor directly into a simple access pattern.
 tensorToAccessPattern :: Tensor -> AccessPattern
-tensorToAccessPattern = stackPush stackNew
+tensorToAccessPattern = return
 
 -- | Access the access pattern at the given dimensions.
 access :: AccessPattern -> DimIdSet -> AccessPattern
-access a s = case stackPop a of
-  Just (rest, top) ->
-    let (l, r) = partitionWithKey (\k _ -> Set.member k s) top
-     in (stackPush (stackPush rest r) l)
-  _ -> error ""
-
--- Pop all of s0 into s1.
-popStackIntoStack :: Stack a -> Stack a -> Stack a
-popStackIntoStack s0 s1 = case stackPop s0 of
-  Just (rest, top) -> popStackIntoStack rest (stackPush s1 top)
-  Nothing -> s1
-
-reverseStack :: Stack a -> Stack a
-reverseStack s =
-  popStackIntoStack s stackNew
-
--- | Stack stack s1 onto s0.
-stackStacks :: Stack a -> Stack a -> Stack a
-stackStacks s0 s1 =
-  popStackIntoStack (reverseStack s1) s0
+access (top : rest) s =
+  let newtop = filterWithKey (\k _ -> HashSet.member k s) top
+      newbot = difference top newtop
+   in newtop : newbot : rest
+access _ _ = undefined
 
 -- |
+-- Top frames must match.
+-- Second frames don't need to match. They will be combined.
+-- Rest of frames after that need to match.
 cartProd :: AccessPattern -> AccessPattern -> AccessPattern
-cartProd a0 a1 = case (stackPop a0, stackPop a1) of
-  (Just (rest0, top0), Just (rest1, top1)) ->
-    if top0 == top1
-      then stackPush (stackPush (stackStacks rest0 rest1) (singleton "T" 2)) top0
-      else error ""
-  _ -> error ""
+cartProd (top : next : rest) (top' : next' : rest')
+  | top == top' && rest == rest' = top : HashMap.fromList [("T", 2)] : HashMap.union next next' : rest
+cartProd [top] [top']
+  | top == top' = [top, HashMap.fromList [("T", 2)]]
+cartProd _ _ = undefined
 
-activations = tensorToAccessPattern $ Data.Map.Strict.fromList [("N", 1), ("C", 3), ("H", 32), ("W", 32)]
+dotProd :: AccessPattern -> AccessPattern
+dotProd (top : tuple : rest) = rest
+dotProd _ = []
 
-weights = tensorToAccessPattern $ Data.Map.Strict.fromList [("O", 8), ("I", 3), ("kH", 3), ("kW", 3)]
+toTensor :: AccessPattern -> Tensor
+toTensor = foldr HashMap.union HashMap.empty
 
-a = tensorToAccessPattern $ Data.Map.Strict.fromList [("M", 32), ("N", 16)]
+activations = tensorToAccessPattern $ fromList [("N", 1), ("C", 3), ("H", 32), ("W", 32)]
 
-b = tensorToAccessPattern $ Data.Map.Strict.fromList [("N", 16), ("O", 64)]
+weights = tensorToAccessPattern $ fromList [("O", 8), ("I", 3), ("kH", 3), ("kW", 3)]
+
+a = tensorToAccessPattern $ fromList [("M", 32), ("N", 16)]
+
+b = tensorToAccessPattern $ fromList [("N", 16), ("O", 64)]
+
+-- Matrix multiplication.
+aTimesB = toTensor $ dotProd $ cartProd a' b'
+  where
+    a' = access a (dims ["N"])
+    b' = access b (dims ["N"])
+
+c = tensorToAccessPattern $ fromList [("batch", 3), ("M", 32), ("N", 16)]
+
+d :: AccessPattern
+d = tensorToAccessPattern $ fromList [("batch", 3), ("N", 16), ("O", 64)]
+
+-- Batched matrix multiplication.
+cTimesD = toTensor $ dotProd $ cartProd c' d'
+  where
+    c' = access (access c (dims ["M", "N"])) (dim "N")
+    d' = access (access d (dims ["N", "O"])) (dim "N")
